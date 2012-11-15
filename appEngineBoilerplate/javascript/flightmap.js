@@ -1,0 +1,86 @@
+/**
+ * @param {Airport} origin
+ * @param {Airport} destination
+ * @constructor
+ */
+function FlightRoute(origin, destination) {
+	this.origin = origin;
+	this.destination = destination;
+	this.destination.destinations.push(origin);
+	this.origin.destinations.push(destination);
+	this.polyline = new google.maps.Polyline({
+		path: [origin.location, destination.location],
+		geodesic: true
+	});
+}
+
+FlightRoute.prototype.show = function() {
+	this.polyline.setMap(flightmap.map);
+	this.origin.show();
+	this.destination.show();
+};
+
+/**
+ * @param {string} longName
+ * @param {string} code
+ * @param {google.maps.LatLng} location
+ * @constructor
+ */
+function Airport(longName, code, location) {
+	this.longName = longName;
+	this.code = code;
+	this.location = location;
+	var destinations = this.destinations = [];
+	var marker = this.marker = new google.maps.Marker({
+		position: location,
+		title: longName
+	});
+	google.maps.event.addListener(marker, 'click', function() {
+		var content = '';
+		for (var i = 0; i < destinations.length; ++i) {
+			var destination = destinations[i];
+			content += '<li>' + destination.longName + ' (' + destination.code + ')</li>';
+		}
+		content = '<b>' + longName + ' (' + code + ')</b><br><br>Destinations: <ul>' + content + '</ul>';
+		flightmap.infowindow.setContent(content);
+		flightmap.infowindow.open(flightmap.map, marker);
+	});
+}
+
+Airport.prototype.show = function() {
+	this.marker.setMap(flightmap.map);
+};
+
+var flightmap = {
+	accra: new Airport('Accra', 'ACC', new google.maps.LatLng(5.60737, -0.171769)),
+	kumasi: new Airport('Kumasi', 'KUM', new google.maps.LatLng(6.7125, -1.5911110)),
+	tamale: new Airport('Tamale', 'TAM', new google.maps.LatLng(9.556944, -0.863056)),
+	takoradi: new Airport('Takoradi', 'TAK', new google.maps.LatLng(4.892116, -1.775818)),
+	new_york: new Airport('New York', 'JFK', new google.maps.LatLng(40.7142, -74.0064))
+};
+
+flightmap.routes = [
+    new FlightRoute(flightmap.accra, flightmap.kumasi),
+    new FlightRoute(flightmap.accra, flightmap.tamale),
+    new FlightRoute(flightmap.accra, flightmap.takoradi),
+    new FlightRoute(flightmap.accra, flightmap.new_york)
+];
+
+
+flightmap.init = function() {
+	flightmap.map = new google.maps.Map(document.getElementById('flightmap'), {
+		mapTypeId: google.maps.MapTypeId.ROADMAP
+	});
+	flightmap.infowindow = new google.maps.InfoWindow();
+	
+	var bounds = new google.maps.LatLngBounds();
+	for (var i = 0; i < flightmap.routes.length; ++i) {
+		var route = flightmap.routes[i];
+		route.show();
+		bounds.extend(route.origin.location);
+		bounds.extend(route.destination.location);
+	}
+	
+
+	flightmap.map.fitBounds(bounds);
+};
